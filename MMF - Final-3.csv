@@ -1,0 +1,34 @@
+Infection_number,Date,Person Infected,Time,Infected by
+1,15/06/2026,Kimberley,15:38,
+2,16/06/2026,Morgan,10:17,
+3,16/06/2026,Tayla,11:11,Morgan
+4,16/06/2026,Pendo,15:38,Mandie
+5,16/06/2026,Haron,15:18,Cebile
+6,16/06/2026,Thenuja,08:30,Kimberley
+7,16/06/2026,Cebile,15:50,Tayla
+8,16/06/2026,Mandie,10:15,
+9,16/06/2026,Shannon,16:30,Tayla
+10,16/06/2026,Angelica,15:38,Mandie
+11,16/06/2026,Ashton,10:50,Morgan
+12,16/06/2026,Ethel,10:30,Morgan
+13,17/06/2026,Thuli,08:07,Mandie
+14,17/06/2026,Abraham,16:30,Shannon
+15,17/06/2026,Ennie,22:15,Thuli
+16,17/06/2026,Lebogang (Francinah),22:10,Thuli
+17,17/06/2026,Mokgetwa,22:09,Thuli
+18,17/06/2026,Boaz,15:38,Haron
+19,17/06/2026,Kisaka,15:40,Haron
+20,18/06/2026,Mario,13:15,Thenuja
+21,18/06/2026,Vix,22:23,Thuli
+22,18/06/2026,Mija,21:12,Boikanyo
+23,18/06/2026,Thulisile,13:52,Boikanyo
+24,18/06/2026,Boikanyo,10:04,Abraham
+25,18/06/2026,Stephen,14:00,Ennie
+26,18/06/2026,Geteye,10:30,Ennie
+27,18/06/2026,Vhugala,13:55,Boikanyo
+28,18/06/2026,Disebo,,Boikanyo
+29,18/06,Gebrekiros,13:58,Ennie
+30,18/06/2026,Johanness,18:30,Mario
+31,19/06/2026,Rachid,15:22,Thulisile
+32,19/06/2026,Jude,15:20,Thulisile
+33,19/06/2026,Tommy,15:16,Thulisile
