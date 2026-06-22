@@ -1,0 +1,35 @@
+Infection_number,Date,Person Infected,Time,Infected by,Location,Doctor
+1,15/06/2026,Kimberley,15:38:00,Started,1,1
+2,16/06/2026,Morgan,10:17:00,Started,0,1
+3,16/06/2026,Tayla,11:11:00,Morgan,0,1
+4,16/06/2026,Pendo,15:38:00,Mandie,1,1
+5,16/06/2026,Haron,15:18:00,Cebile,1,0
+6,16/06/2026,Thenuja,08:30:00,Kimberley,1,0
+7,16/06/2026,Cebile,15:50:00,Tayla,1,1
+8,16/06/2026,Mandie,10:15:00,Started,0,0
+9,16/06/2026,Shannon,16:30:00,Tayla,0,0
+10,16/06/2026,Angelica,15:38:00,Mandie,1,0
+11,16/06/2026,Ashton,10:50:00,Morgan,0,0
+12,16/06/2026,Ethel,10:30:00,Morgan,0,0
+13,17/06/2026,Thuli,08:07:00,Mandie,0,0
+14,17/06/2026,Abraham,16:30:00,Shannon,0,0
+15,17/06/2026,Ennie,22:15:00,Thuli,0,1
+16,17/06/2026,Lebogang (Francinah),22:10:00,Thuli,0,1
+17,17/06/2026,Mokgetwa,22:09:00,Thuli,0,0
+18,17/06/2026,Boaz,15:38:00,Haron,1,0
+19,17/06/2026,Kisaka,15:40:00,Haron,1,0
+20,18/06/2026,Mario,13:15:00,Thenuja,0,0
+21,18/06/2026,Vix,22:23:00,Thuli,0,1
+22,18/06/2026,Mija,21:12:00,Boikanyo,0,0
+23,18/06/2026,Thulisile,13:52:00,Boikanyo,0,0
+24,18/06/2026,Boikanyo,10:04:00,Abraham,0,0
+25,18/06/2026,Stephen,14:00:00,Ennie,1,0
+26,18/06/2026,Geteye,10:30:00,Ennie,1,0
+27,18/06/2026,Vhugala,13:55:00,Boikanyo,0,0
+28,18/06/2026,Disebo,13:58:00,Boikanyo,0,0
+29,18/06/2026,Gebrekiros,13:58:00,Ennie,1,0
+30,18/06/2026,Johanness,18:30:00,Mario,0,0
+31,19/06/2026,Rachid,15:22:00,Thulisile,1,0
+32,19/06/2026,Jude,15:20:00,Thulisile,1,0
+33,19/06/2026,Tommy,15:16:00,Thulisile,0,0
+34,18/06/2026,Abalo,18:10:00,Thenuja,0,0
