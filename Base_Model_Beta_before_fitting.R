@@ -13,7 +13,7 @@ library(tidyr)
 setwd("C:/Users/Ennie Matlhanya/MMEDGit/MMF")
 data <- read.csv("MMF-Final+Locations+Doctors.csv", stringsAsFactors = FALSE)
 
-
+MMF_DoctorVisits
 
 data$Date     <- as.Date(data$Date, format = "%d/%m/%Y")
 data$DateTime <- as.POSIXct(paste(data$Date, data$Time),
@@ -153,3 +153,4 @@ ggplot() +
   ggtitle("SIAR Model vs Observed Outbreak Incidence") +
   theme_bw(base_size = 13) +
   theme(legend.position = "bottom", legend.title = element_blank())
+

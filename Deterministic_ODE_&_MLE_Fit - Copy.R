@@ -1,12 +1,4 @@
-# Notes to change: 
-# N= 46
-# Beta before should be 1.8, mean from Poisson distribution, from 0.6
-# Do observations per time windows instead of per day, or even per hour, actually do all of them
-# When all perfect and pretty, change just the data to make the plots for hourly, and for the time windows 
-# Add IA+IS infections to SIAR model as well
-# make R_0 = Beta/gamma
-# Keep track of units
-# 
+
 library(deSolve)
 library(ggplot2)
 library(ellipse)
@@ -16,8 +8,6 @@ is_positive_scalar <- function(x) {
   is.numeric(x) && length(x) == 1 && !is.na(x) && x > 0
 }
 
-
-setwd("C:/Users/Ennie Matlhanya/MMEDGit/MMF")
 data <- read.csv("MMF-Final+Locations+Doctors.csv", stringsAsFactors = FALSE)
 
 
@@ -27,7 +17,7 @@ data$DateTime <- as.POSIXct(paste(data$Date, data$Time),
 data$Day      <- as.numeric(data$Date - min(data$Date))
 
 # Location == 1 → IS (symptomatic), Location == 0 → IA (asymptomatic)
-data$Status <- ifelse(data$Location == 1, "IS", "IA")
+data$Status <- ifelse(data$Location == 1, "IE", "IA")
 
 # counts
 n_IA <- sum(data$Status == "IA")
@@ -57,7 +47,7 @@ cat("\nObserved daily incidence:\n")
 print(obsDat)
 
 disease_params <- function(
-    beta   = 1.8,   
+    beta   = 0.6,   
     pA     = 0.4,   
     gammaA = 1,     
     gammaS = 1,     
@@ -84,7 +74,7 @@ print(pop.siar)
 
 # assumed beta
 values <- c(
-  beta   = 1.8,
+  beta   = 0.6,
   pA     = 0.4,
   gammaA = 1,
   gammaS = 1,
@@ -169,7 +159,7 @@ ggplot(ts_long, aes(x = time, y = Count, colour = Compartment)) +
   ) +
   xlab("Days since index case (15 June 2026)") +
   ylab("Number of individuals") +
-  ggtitle("SIAR Deterministic Model (assumed beta = 1.8)",
+  ggtitle("SIAR Deterministic Model (assumed beta = 0.6)",
           subtitle = paste0("R0 = ", round(R0_value, 2),
                             "  |  pA = ", round(values["pA"], 2))) +
   theme_bw(base_size = 13) +
@@ -219,8 +209,8 @@ nllikelihood <- function(parms = disease_params(), obsDat = obsDat) {
   return(sum(nlls))
 }
 
-# Test: NLL at assumed beta = 1.8
-cat("\nNLL at assumed beta = 1.8:", round(nllikelihood(disease_params(), obsDat), 4), "\n")
+# Test: NLL at assumed beta = 0.6
+cat("\nNLL at assumed beta = 0.6:", round(nllikelihood(disease_params(), obsDat), 4), "\n")
 
 # Fitting beta on log scale 
 subsParms <- function(fit.params, fixed.params = disease_params()) {
@@ -301,7 +291,7 @@ ggplot() +
            aes(x = Day, y = new_cases, fill = "Observed"),
            alpha = 0.5, width = 0.4) +
   geom_line(data = assumed_daily,
-            aes(x = Day, y = predicted, colour = "Assumed beta = 1.8"),
+            aes(x = Day, y = predicted, colour = "Assumed beta = 0.6"),
             linewidth = 1, linetype = "dashed") +
   geom_line(data = fit_daily,
             aes(x = Day, y = predicted, colour = "MLE fit"),
@@ -310,13 +300,13 @@ ggplot() +
              aes(x = Day, y = predicted, colour = "MLE fit"),
              size = 3) +
   scale_colour_manual(values = c("MLE fit"            = "steelblue",
-                                 "Assumed beta = 1.8" = "grey40")) +
+                                 "Assumed beta = 0.6" = "grey40")) +
   scale_fill_manual(values = c("Observed" = "tomato")) +
   labs(
     x        = "Days since index case (15 June 2026)",
     y        = "New cases per day",
     title    = "SIAR Model — Assumed Beta vs MLE Fit",
-    subtitle = paste0("Assumed beta = 1.8 |  MLE beta = ", round(beta.MLE, 3),
+    subtitle = paste0("Assumed beta = 0.6  |  MLE beta = ", round(beta.MLE, 3),
                       "  |  R0 = ",         round(beta.MLE, 3),
                       "  |  95% CI: [",     round(ci_beta[1], 3),
                       ", ",                 round(ci_beta[2], 3), "]"),
@@ -340,7 +330,7 @@ ggplot(profile_df, aes(x = beta, y = nll)) +
              colour = "red") +
   geom_vline(aes(xintercept = beta.MLE, linetype = "MLE beta"),
              colour = "black") +
-  geom_vline(aes(xintercept = 1.8, linetype = "Assumed beta = 1.8"),
+  geom_vline(aes(xintercept = 0.6, linetype = "Assumed beta = 0.6"),
              colour = "grey40") +
   scale_linetype_manual(values = c("95% CI cutoff"    = "dashed",
                                    "MLE beta"         = "solid",

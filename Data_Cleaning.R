@@ -141,4 +141,6 @@ df <- df %>%
 
 
 # 2. Save the objects as CSV files, run only the corrective code you want for the specific data set you would like
-write_csv(df, "MMF-Final+Duplicates.csv")
+write_csv(df, "MMF-Final+Duplicates2.csv")
+
+mean(table(MMF_Final_Locations_Doctors$`Infected by`))

@@ -1,8 +1,9 @@
 library(dplyr)
 library(readr)
 library(ggplot2)
-
-raw_data <- read_csv("MMF-Final-3.csv")
+# Make csv files for time windows and hourly
+# Visualise Empire v Aims day v night stuff
+raw_data <- read_csv("MMF-Final+Locations+Doctors.csv")
 
 # For hours
 cleaned_hours <- raw_data %>%
@@ -18,13 +19,13 @@ cleaned_hours <- raw_data %>%
   mutate(Hour_Bin = cut(DateTime, breaks = "hour")) %>%
   mutate(Hour_Bin = as.POSIXct(Hour_Bin))
 
-start_time <- min(cleaned_base$Hour_Bin, na.rm = TRUE)
-end_time   <- max(cleaned_base$Hour_Bin, na.rm = TRUE)
+start_time <- min(cleaned_hours$Hour_Bin, na.rm = TRUE)
+end_time   <- max(cleaned_hours$Hour_Bin, na.rm = TRUE)
 master_timeline <- data.frame(
   Hour_Bin = seq(from = start_time, to = end_time, by = "hour")
 )
 
-hourly_counts <- cleaned_base %>%
+hourly_counts <- cleaned_hours %>%
   group_by(Hour_Bin) %>%
   summarise(Count = n(), .groups = 'drop')
 

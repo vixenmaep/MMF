@@ -232,3 +232,4 @@ visNetwork(
 
 #' To save this interative plot, click on Export in the Viewer panel and then click as
 #' 'Save as Web Page'.
+

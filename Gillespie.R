@@ -21,7 +21,10 @@
 ## Recovery/Removal (I_A)          (S,I_S,R)->(S,I_S-1,R+1)     gamma*(I_S)
 
 ## 
-
+# TODO LIST:
+# make it hourly, so day*24hrs
+# Make population 46
+# have to use the MLE beta from Deterministic ODE MLE Fit
 # Step 0: Load essential packages 
 
 library(tidyverse) # has ggplot and other fancy stuff has more libraries rolled in one.
@@ -30,7 +33,7 @@ library(hms)
 
 # Step 1: Load in Data for comparison to Gillespie 
 
-df <- read_csv("MMF-Final+Duplicates.csv")
+df <- read_csv("MMF-Final+Locations+Doctors.csv")
 
 
 head(df)
@@ -135,3 +138,5 @@ ggplot(ts1_long, aes(x = time, y = count, color = Compartment)) +
        y = "Count", 
        x = "Time") +
   theme_minimal(base_size = 14)
+
+
