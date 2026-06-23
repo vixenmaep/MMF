@@ -1,4 +1,4 @@
-
+# TODO: 
 library(deSolve)
 library(ggplot2)
 library(ellipse)
@@ -16,15 +16,15 @@ data$DateTime <- as.POSIXct(paste(data$Date, data$Time),
                             format = "%Y-%m-%d %H:%M:%S")
 data$Day      <- as.numeric(data$Date - min(data$Date))
 
-# Location == 1 → IS (symptomatic), Location == 0 → IA (asymptomatic)
+# Location == 1 → IE (Empire), Location == 0 → IA (AIMS)
 data$Status <- ifelse(data$Location == 1, "IE", "IA")
 
 # counts
 n_IA <- sum(data$Status == "IA")
-n_IS <- sum(data$Status == "IS")
+n_IE <- sum(data$Status == "IE")
 cat("Total cases    :", nrow(data), "\n")
-cat("Asymptomatic (IA):", n_IA, "\n")
-cat("Symptomatic  (IS):", n_IS, "\n")
+cat("AIMS (IA):", n_IA, "\n")
+cat("Empire (IE):", n_IE, "\n")
 
 #daily incidence
 daily_total <- aggregate(Infection_number ~ Day, data = data, FUN = length)
@@ -46,8 +46,13 @@ obsDat[is.na(obsDat)] <- 0
 cat("\nObserved daily incidence:\n")
 print(obsDat)
 
+betaMixprior <- 1.8
+betaNightEprior <- 0
+betaNightAprior <-1.5
+betaA <- function(Time) {ifelse(Time >= "08:00:00" & Time <= "18:30:00", betaMixprior, betaNightAprior)}
+betaE <- function(Time) {ifelse(Time >= "08:00:00" & Time <= "18:30:00", betaMixprior, betaNightEprior)}
 disease_params <- function(
-    beta   = 0.6,   
+    beta   = betafunc,
     pA     = 0.4,   
     gammaA = 1,     
     gammaS = 1,     
@@ -74,7 +79,7 @@ print(pop.siar)
 
 # assumed beta
 values <- c(
-  beta   = 0.6,
+  beta   = 1.8,
   pA     = 0.4,
   gammaA = 1,
   gammaS = 1,
@@ -121,7 +126,7 @@ siar_CI <- function(t, y, parms) {
   })
 }
 
-# DETERMINISTIC MODEL — ASSUMED BETA = 0.6
+# DETERMINISTIC MODEL — ASSUMED BETA = 1.8
 
 time.out <- seq(0, 10, by = 0.1)
 
@@ -159,7 +164,7 @@ ggplot(ts_long, aes(x = time, y = Count, colour = Compartment)) +
   ) +
   xlab("Days since index case (15 June 2026)") +
   ylab("Number of individuals") +
-  ggtitle("SIAR Deterministic Model (assumed beta = 0.6)",
+  ggtitle("SIAR Deterministic Model (assumed beta = 1.8)",
           subtitle = paste0("R0 = ", round(R0_value, 2),
                             "  |  pA = ", round(values["pA"], 2))) +
   theme_bw(base_size = 13) +
@@ -209,8 +214,8 @@ nllikelihood <- function(parms = disease_params(), obsDat = obsDat) {
   return(sum(nlls))
 }
 
-# Test: NLL at assumed beta = 0.6
-cat("\nNLL at assumed beta = 0.6:", round(nllikelihood(disease_params(), obsDat), 4), "\n")
+# Test: NLL at assumed beta = 1.8
+cat("\nNLL at assumed beta = 1.8:", round(nllikelihood(disease_params(), obsDat), 4), "\n")
 
 # Fitting beta on log scale 
 subsParms <- function(fit.params, fixed.params = disease_params()) {
@@ -278,7 +283,7 @@ ci_beta     <- exp(ci_log_beta)
 
 cat("\n95% CI for beta / R0: [", round(ci_beta[1], 4), ",", round(ci_beta[2], 4), "]\n")
 
-# Simulate with MLE beta and with assumed beta = 0.6 for comparison
+# Simulate with MLE beta and with assumed beta = 1.8 for comparison
 fitParms  <- subsParms(MLEfits, disease_params())
 fitDat    <- simEpidemic(parms = fitParms,      tseq = seq(0, 4, by = 0.01))
 assumeDat <- simEpidemic(parms = disease_params(), tseq = seq(0, 4, by = 0.01))
@@ -291,7 +296,7 @@ ggplot() +
            aes(x = Day, y = new_cases, fill = "Observed"),
            alpha = 0.5, width = 0.4) +
   geom_line(data = assumed_daily,
-            aes(x = Day, y = predicted, colour = "Assumed beta = 0.6"),
+            aes(x = Day, y = predicted, colour = "Assumed beta = 1.8"),
             linewidth = 1, linetype = "dashed") +
   geom_line(data = fit_daily,
             aes(x = Day, y = predicted, colour = "MLE fit"),
@@ -300,13 +305,13 @@ ggplot() +
              aes(x = Day, y = predicted, colour = "MLE fit"),
              size = 3) +
   scale_colour_manual(values = c("MLE fit"            = "steelblue",
-                                 "Assumed beta = 0.6" = "grey40")) +
+                                 "Assumed beta = 1.8" = "grey40")) +
   scale_fill_manual(values = c("Observed" = "tomato")) +
   labs(
     x        = "Days since index case (15 June 2026)",
     y        = "New cases per day",
     title    = "SIAR Model — Assumed Beta vs MLE Fit",
-    subtitle = paste0("Assumed beta = 0.6  |  MLE beta = ", round(beta.MLE, 3),
+    subtitle = paste0("Assumed beta = 1.8  |  MLE beta = ", round(beta.MLE, 3),
                       "  |  R0 = ",         round(beta.MLE, 3),
                       "  |  95% CI: [",     round(ci_beta[1], 3),
                       ", ",                 round(ci_beta[2], 3), "]"),
@@ -330,11 +335,11 @@ ggplot(profile_df, aes(x = beta, y = nll)) +
              colour = "red") +
   geom_vline(aes(xintercept = beta.MLE, linetype = "MLE beta"),
              colour = "black") +
-  geom_vline(aes(xintercept = 0.6, linetype = "Assumed beta = 0.6"),
+  geom_vline(aes(xintercept = 1.8, linetype = "Assumed beta = 1.8"),
              colour = "grey40") +
   scale_linetype_manual(values = c("95% CI cutoff"    = "dashed",
                                    "MLE beta"         = "solid",
-                                   "Assumed beta = 0.6" = "dotted")) +
+                                   "Assumed beta = 1.8" = "dotted")) +
   scale_x_log10() +
   labs(
     x        = expression(beta ~ "(log scale)"),
