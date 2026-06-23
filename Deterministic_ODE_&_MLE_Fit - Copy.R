@@ -65,11 +65,11 @@ index_cases <- data[data$Infected.by == "Started", ]
 I0_IE <- sum(data$Location == 1 & data$Infected.by == "Started") #sum(as.integer(index_case$Location == 1))
 I0_IA <- sum(data$Location == 0 & data$Infected.by == "Started")
 #I0_IA <- sum(as.integer(index_case$Location == 0))
-S0_E <- sum(data$Location) - I0_IE
 N0    <- 42
-S0_A <- N0 - S0_E - I0_IA
 N_A <- 25 
 N_E <- 17
+S0_E <- N_E - I0_IE
+S0_A <- N_A - I0_IA
 
 pop.ssiirr <- c(
   SE  = S0_E,
@@ -83,12 +83,24 @@ pop.ssiirr <- c(
 cat("\nInitial conditions:\n")
 print(pop.ssiirr)
 
-# assumed beta
+# Update your values vector to include all constants needed by the function
 values <- c(
-  gammaA = 1,
-  gammaE = 1,
-  N      = N0
+  gammaA          = 1,
+  gammaE          = 1,
+  N0              = 42,
+  N_A             = 25,
+  N_E             = 17,
+  betaMixprior    = betaMixprior,
+  betaNightAprior = betaNightAprior,
+  betaNightEprior = betaNightEprior
 )
+
+# assumed beta
+#values <- c(
+#  gammaA = 1,
+#  gammaE = 1,
+#  N      = N0
+#)
 
 cat("\nParameter values:\n")
 print(values)
@@ -96,28 +108,58 @@ print(values)
 R0_prior <- betaMixprior
 cat("\nBasic Reproduction Number (R0):", round(R0_value, 3), "\n")
 
+#ssiirr <- function(t, y, parms) {
+ # with(c(as.list(y), parms), {
+  #  beta_M  <- ifelse((t >= as.integer(t) + 0.3328) & (t <= as.integer(t) + 0.77071), betaMixprior, 0)
+  #  beta_NA <- ifelse((t >= as.integer(t) + 0.3328) & (t <= as.integer(t) + 0.77071), 0, betaNightAprior)
+  #  beta_NE <- ifelse((t >= as.integer(t) + 0.3328) & (t <= as.integer(t) + 0.77071), 0, betaNightEprior)
+  #  
+  #  lambdaA        <- (beta_M*(IA + IE)/N0 + beta_NA*IA/N_A)*SA
+  #  lambdaE       <- (beta_M*(IA + IE)/N0 + beta_NE*IE/N_E)*SE
+  #  new_infectionsA <- lambdaA
+  #  new_infectionsE <- lambdaE
+    
+  #  dSAdt  <- -lambdaA
+  #  dSEdt <- -lambdaE
+  #  dIAdt <-  new_infectionsA - gammaA * IA
+  #  dIEdt <-  new_infectionsE - gammaE * IE
+  #  dRAdt  <-  gammaA * IA 
+  #  dREdt  <-  gammaE * IE 
+    
+  #  return(list(c(dSAdt, dSEdt, dIAdt, dIEdt, dRAdt, dREdt)))
+  #})
+#}
 ssiirr <- function(t, y, parms) {
-  with(c(as.list(y), parms), {
-    beta_M  <- ifelse((t >= as.integer(t) + 0.3328) & (t <= as.integer(t) + 0.77071), betaMixprior, 0)
-    beta_NA <- ifelse((t >= as.integer(t) + 0.3328) & (t <= as.integer(t) + 0.77071), 0, betaNightAprior)
-    beta_NE <- ifelse((t >= as.integer(t) + 0.3328) & (t <= as.integer(t) + 0.77071), 0, betaNightEprior)
+  with(as.list(c(y, parms)), {
     
-    lambdaA        <- (beta_M*(IA + IE)/N0 + beta_NA*IA/N_A)*SA
-    lambdaE       <- (beta_M*(IA + IE)/N0 + beta_NE*IE/N_E)*SE
-    new_infectionsA <- lambdaA
-    new_infectionsE <- lambdaE
+    # 1. Isolate the time-of-day decimal fraction safely using modulo
+    day_fraction <- t %% 1
+    is_daytime   <- (day_fraction >= 0.3328) & (day_fraction <= 0.77071)
     
-    dSAdt  <- -lambdaA
-    dSEdt <- -lambdaE
-    dIAdt <-  new_infectionsA - gammaA * IA
-    dIEdt <-  new_infectionsE - gammaE * IE
-    dRAdt  <-  gammaA * IA 
-    dREdt  <-  gammaE * IE 
+    # 2. Assign dynamic priors based on time-of-day conditions
+    beta_M  <- ifelse(is_daytime, betaMixprior, 0)
+    beta_NA <- ifelse(is_daytime, 0, betaNightAprior)
+    beta_NE <- ifelse(is_daytime, 0, betaNightEprior)
+    
+    # 3. Calculate forces of infection (per-capita risk rates)
+    # Note: Removed SA and SE from these lines so they aren't multiplied twice below
+    inf_mix <- beta_M * (IA + IE) / N0
+    inf_A   <- beta_NA * IA / N_A
+    inf_E   <- beta_NE * IE / N_E
+    
+    # 4. Define system differential equations
+    dSAdt <- -(inf_mix + inf_A) * SA
+    dSEdt <- -(inf_mix + inf_E) * SE
+    
+    dIAdt <- (inf_mix + inf_A) * SA - gammaA * IA
+    dIEdt <- (inf_mix + inf_E) * SE - gammaE * IE
+    
+    dRAdt <- gammaA * IA 
+    dREdt <- gammaE * IE 
     
     return(list(c(dSAdt, dSEdt, dIAdt, dIEdt, dRAdt, dREdt)))
   })
 }
-
 # TODO: did we even plot confidence intervals? Do we need them?
 #ssiirr_CI <- function(t, y, parms) {
  # with(c(as.list(y), parms), {
@@ -137,7 +179,61 @@ ssiirr <- function(t, y, parms) {
 
 # DETERMINISTIC MODEL — ASSUMED BETA = 1.8
 
-time.out <- seq(0, 5, by = 0.02083)
+time.out <- seq(0, 10, by = 0.02083)
+
+#ts.ssiirr <- data.frame(lsoda(
+#  y     = pop.ssiirr,
+#  times = time.out,
+#  func  = ssiirr,
+#  parms = values
+#))
+ts.ssiirr <- data.frame(lsoda(
+  y     = pop.ssiirr,
+  times = time.out,
+  func  = ssiirr,
+  parms = values
+))
+cat("\nModel output at day 2:\n");  print(subset(ts.ssiirr, time == 2))
+cat("\nModel output at day 5:\n"); print(subset(ts.ssiirr, time == 5))
+# 1. Update the parameters vector so the function can actually see them
+
+
+# 2. The corrected ssiirr function
+ssiirr <- function(t, y, parms) {
+  with(as.list(c(y, parms)), {
+    
+    # Time-of-day logic
+    day_fraction <- t %% 1
+    is_daytime   <- (day_fraction >= 0.3328) & (day_fraction <= 0.77071)
+    
+    # Dynamic betas
+    beta_M  <- ifelse(is_daytime, betaMixprior, 0)
+    beta_NA <- ifelse(is_daytime, 0, betaNightAprior)
+    beta_NE <- ifelse(is_daytime, 0, betaNightEprior)
+    
+    # Force of infection (per house)
+    inf_mix <- beta_M * (IA + IE) / N0
+    inf_NA   <- beta_NA * IA / N_A
+    inf_NE   <- beta_NE * IE / N_E
+    
+    # Derivatives
+    dSAdt <- -(inf_mix + inf_NA) * SA
+    dSEdt <- -(inf_mix + inf_NE) * SE
+    
+    dIAdt <- (inf_mix + inf_NA) * SA - gammaA * IA
+    dIEdt <- (inf_mix + inf_NE) * SE - gammaE * IE
+    
+    dRAdt <- gammaA * IA 
+    dREdt <- gammaE * IE 
+    
+    # CRITICAL FIX: The order here now perfectly matches pop.ssiirr
+    # SE, SA, IA, IE, RA, RE
+    return(list(c(dSEdt, dSAdt, dIAdt, dIEdt, dRAdt, dREdt)))
+  })
+}
+
+# 3. Run the model
+time.out <- seq(0, 10, by = 0.02083)
 
 ts.ssiirr <- data.frame(lsoda(
   y     = pop.ssiirr,
@@ -145,10 +241,6 @@ ts.ssiirr <- data.frame(lsoda(
   func  = ssiirr,
   parms = values
 ))
-
-cat("\nModel output at day 2:\n");  print(subset(ts.ssiirr, time == 2))
-cat("\nModel output at day 5:\n"); print(subset(ts.ssiirr, time == 5))
-
 #TODO: split data by location for this thing
 daily_obs <- aggregate(Infection_number ~ Day + Status, data = data, FUN = length)
 names(daily_obs)[3] <- "Count"
@@ -180,6 +272,53 @@ ggplot(ts_long, aes(x = time, y = Count, colour = Compartment)) +
                             "  |  pA = ", round(values["pA"], 2))) +
   theme_bw(base_size = 13) +
   theme(legend.position = "bottom", legend.title = element_blank())
+
+# Filter and pivot only AIMS compartments
+ts_long_A <- pivot_longer(ts.ssiirr,
+                          cols      = c("SA", "IA", "RA"),
+                          names_to  = "Compartment",
+                          values_to = "Count")
+
+ggplot(ts_long_A, aes(x = time, y = Count, colour = Compartment)) +
+  geom_line(linewidth = 1.1) +
+  scale_colour_manual(
+    values = c(SA = "steelblue", IA = "orange", RA = "forestgreen"),
+    labels = c(SA = "Susceptible living at AIMS",
+               IA = "Infectious (living at AIMS)",
+               RA = "Recovered at AIMS")
+  ) +
+  xlab("Days since index case (15 June 2026)") +
+  ylab("Number of individuals") +
+  ggtitle("AIMS (Population A) Deterministic Model",
+          subtitle = paste0("Daytime Beta = ", betaMixprior, " | Nighttime Beta = ", betaNightAprior)) +
+  theme_bw(base_size = 13) +
+  theme(legend.position = "bottom", legend.title = element_blank())
+
+# Filter and pivot only Empire compartments
+ts_long_E <- pivot_longer(ts.ssiirr,
+                          cols      = c("SE", "IE", "RE"),
+                          names_to  = "Compartment",
+                          values_to = "Count")
+
+ggplot(ts_long_E, aes(x = time, y = Count, colour = Compartment)) +
+  geom_line(linewidth = 1.1) +
+  scale_colour_manual(
+    values = c(SE = "magenta", IE = "red", RE = "black"),
+    labels = c(SE = "Susceptible living at Empire",
+               IE = "Infectious (living at Empire)",
+               RE = "Recovered at Empire")
+  ) +
+  xlab("Days since index case (15 June 2026)") +
+  ylab("Number of individuals") +
+  ggtitle("Empire (Population E) Deterministic Model",
+          subtitle = paste0("Daytime Beta = ", betaMixprior, " | Nighttime Beta = ", betaNightEprior)) +
+  theme_bw(base_size = 13) +
+  theme(legend.position = "bottom", legend.title = element_blank())
+
+
+
+
+
 
 # Plotting model infectious (IA + IS) vs observed daily cases
 cumulative_obs <- aggregate(Infection_number ~ Day, data = data, FUN = length)
