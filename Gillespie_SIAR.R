@@ -74,7 +74,7 @@ y0 <- c(
   RE = 0
 )
 
-cat("Initial conditions:\n"); print(y0)
+#cat("Initial conditions:\n"); print(y0)
 
 # ---------------------------------------------------------------------------
 # Step 2: Parameters — identical to the ODE script
@@ -99,7 +99,7 @@ params <- c(
 DAYTIME_START <- 0.3328
 DAYTIME_END   <- 0.77071
 
-cat("\nParameters:\n"); print(params)
+#cat("\nParameters:\n"); print(params)
 
 # ---------------------------------------------------------------------------
 # Helper: time-of-day betas (replicates the ifelse logic in the ODE)
@@ -164,7 +164,7 @@ event_ssiirr <- function(time, SA, SE, IA, IE, RA, RE, params, t_end) {
     event_time <- 0.1
     # Which event fires?
     event_type <- sample(names(rates), 1, prob = rates / total_rate)
-    print(event_type)
+    #print(event_type)
     switch(event_type,
            "infect_A_mix"   = { SA <- SA - 1; IA <- IA + 1; new_infection <- 1 },
            "infect_A_night" = { SA <- SA - 1; IA <- IA + 1; new_infection <- 1 },
