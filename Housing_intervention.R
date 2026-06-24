@@ -176,4 +176,27 @@ ggplot(out_all, aes(x = time, y = IA + IE, colour = Scenario)) +
   theme_bw(base_size = 13) +
   theme(legend.position = "bottom")
 
+out_long <- pivot_longer(out_all, cols = c("IA","IE"), names_to = "Group", values_to = "Infectious")
+
+plotInter <- ggplot(out_long, aes(x = time, y = Infectious,
+                     colour = Scenario, linetype = Group)) +
+  geom_line(linewidth = 1.2) +
+  facet_wrap(~Group, scales = "free_y") +
+  scale_colour_manual(values = c("Continuous Mixing"   = "purple",
+                                 "Baseline" = "magenta",
+                                 "Strict Isolation"    = "darkorchid4",
+                                 "Nighttime Swapping" = "plum3")) +
+  scale_linetype_manual(values = c("IA" = "solid", "IE" = "solid")) +
+  labs(
+    x = "Days since index case",
+    y = "Infectious individuals",
+    title = "AIMS vs Empire Epidemic Curves",
+    subtitle = "Housing/Quarantine Intervention"
+  ) +
+  theme_bw(base_size = 13) +
+  theme(legend.position = "bottom", legend.title = element_blank(),
+        axis.title = element_text(size = 15), 
+        axis.text = element_text(size = 13))
+ggsave("Intervention Plot - Housing Change.png", plotInter, width = 8, height = 6, dpi = 300)
+
  
