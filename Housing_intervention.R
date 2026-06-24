@@ -9,7 +9,7 @@ pop.ssiirr <- c(SE = 16, SA = 23, IA = 2, IE = 1, RA = 0, RE = 0)
 values <- c(
   gammaA = 1 , gammaE = 1,
   N0 = 42, N_A = 25, N_E = 17,
-  betaMixprior = 4.9, betaNightAprior = 0.02, betaNightEprior = 0
+  betaMixprior = 3.1, betaNightAprior = 0.9, betaNightEprior = 0
 )
 
 # --- ODE function (ssiirr) ---
@@ -49,9 +49,9 @@ run_scenario <- function(betaMix, betaNightA, betaNightE, label) {
 }
 
 # --- Run scenarios ---
-out_mix    <- run_scenario(4.9, 4.9, 4.9, "Continuous Mixing")
-out_iso    <- run_scenario(4.9, 0.25, 0, "Baseline")
-out_strict <- run_scenario(4.9, 0, 0, "Strict Isolation")
+out_mix    <- run_scenario(3.1, 3.1, 3.1, "Continuous Mixing")
+out_iso    <- run_scenario(3.1, 0.9, 0, "Baseline")
+out_strict <- run_scenario(3.1, 0, 0, "Strict Isolation")
 
 # --- Combine results ---
 out_all <- rbind(out_mix, out_iso, out_strict)
@@ -113,3 +113,67 @@ ggplot(out_long, aes(x = time, y = Infectious,
   theme_bw(base_size = 13) +
   theme(legend.position = "bottom", legend.title = element_blank())
 
+
+ssiirr_swap <- function(t, y, parms) {
+  with(as.list(c(y, parms)), {
+    day_fraction <- t %% 1
+    is_daytime   <- (day_fraction >= 0.3328) & (day_fraction <= 0.77071)
+    
+    if (is_daytime) {
+      # Daytime mixing
+      beta_M  <- betaMixprior
+      inf_mix <- beta_M * (IA + IE) / N0
+      
+      dSAdt <- -inf_mix * SA
+      dSEdt <- -inf_mix * SE
+      dIAdt <- inf_mix * SA - gammaA * IA
+      dIEdt <- inf_mix * SE - gammaE * IE
+    } else {
+      # Nighttime swapping
+      beta_swap <- betaNightAprior  # use same parameter for swap intensity
+      
+      inf_A_swap <- beta_swap * IE / N_E
+      inf_E_swap <- beta_swap * IA / N_A
+      
+      dSAdt <- -inf_A_swap * SA
+      dSEdt <- -inf_E_swap * SE
+      dIAdt <- inf_A_swap * SA - gammaA * IA
+      dIEdt <- inf_E_swap * SE - gammaE * IE
+    }
+    
+    dRAdt <- gammaA * IA
+    dREdt <- gammaE * IE
+    
+    return(list(c(dSEdt, dSAdt, dIAdt, dIEdt, dRAdt, dREdt)))
+  })
+}
+
+# --- Run swap scenario ---
+run_swap <- function(betaMix, betaSwap, label) {
+  values["betaMixprior"]    <- betaMix
+  values["betaNightAprior"] <- betaSwap
+  time.out <- seq(0, 10, by = 0.02083)
+  out <- data.frame(lsoda(y = pop.ssiirr, times = time.out, func = ssiirr_swap, parms = values))
+  out$Scenario <- label
+  return(out)
+}
+
+out_swap <- run_swap(3.1, 0.9 , "Nighttime Swapping")
+out_all <- rbind(out_mix, out_iso, out_strict, out_swap)
+
+ggplot(out_all, aes(x = time, y = IA + IE, colour = Scenario)) +
+  geom_line(linewidth = 1.2) +
+  scale_colour_manual(values = c("Continuous Mixing"   = "purple",
+                                 "Baseline"           = "magenta",
+                                 "Strict Isolation"   = "darkorchid4",
+                                 "Nighttime Swapping" = "plum3")) +
+  labs(
+    x = "Days since index case",
+    y = "Total infectious individuals",
+    title = "Impact of Housing Interventions on Epidemic Spread",
+    subtitle = "Continuous mixing vs baseline vs strict isolation vs swapping"
+  ) +
+  theme_bw(base_size = 13) +
+  theme(legend.position = "bottom")
+
+ 
