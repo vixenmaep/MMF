@@ -219,7 +219,7 @@ plotInter <- ggplot(ts_infectious_long, aes(x = time, y = Count, colour = Scenar
   xlab("Days since 15 June 2026") +
   ylab("Number of Infectious Individuals") +
   ggtitle("AIMS vs Empire Epidemic Curves",
-          subtitle = "Magenta = Baseline, Violet Red = Behavioural Change") +
+          subtitle = "Behavioural Change Intervention") +
   theme_bw(base_size = 13) +
   theme(
     legend.position = "bottom",
