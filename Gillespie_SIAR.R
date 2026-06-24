@@ -80,8 +80,8 @@ y0 <- c(
 # Step 2: Parameters — identical to the ODE script
 # ---------------------------------------------------------------------------
 
-betaMixprior    <- 1.8
-betaNightAprior <- 1.5
+betaMixprior    <- 4.82234
+betaNightAprior <- 0.12757
 betaNightEprior <- 0       # Empire has no night-only transmission in the ODE
 
 params <- c(
@@ -105,24 +105,24 @@ DAYTIME_END   <- 0.77071
 # Helper: time-of-day betas (replicates the ifelse logic in the ODE)
 # ---------------------------------------------------------------------------
 
-get_betas <- function(t, params) {
-  day_fraction <- t %% 1
-  is_daytime   <- (day_fraction >= DAYTIME_START) & (day_fraction <= DAYTIME_END)
+#get_betas <- function(t, params) {
+#  day_fraction <- t %% 1
+#  is_daytime   <- (day_fraction >= DAYTIME_START) & (day_fraction <= DAYTIME_END)
   
-  if (is_daytime) {
-    list(
-      beta_M  = params["betaMix"],
-      beta_NA = 0,
-      beta_NE = 0
-    )
-  } else {
-    list(
-      beta_M  = 0,
-      beta_NA = params["betaNightA"],
-      beta_NE = params["betaNightE"]
-    )
-  }
-}
+#  if (is_daytime) {
+#    list(
+#      beta_M  = params["betaMix"],
+#      beta_NA = 0,
+#      beta_NE = 0
+#    )
+#  } else {
+#    list(
+#      beta_M  = 0,
+#      beta_NA = params["betaNightA"],
+#      beta_NE = params["betaNightE"]
+#    )
+#  }
+#}
 
 # ---------------------------------------------------------------------------
 # Step 3: Single Gillespie step — six possible events, time-dependent rates
@@ -130,11 +130,17 @@ get_betas <- function(t, params) {
 
 event_ssiirr <- function(time, SA, SE, IA, IE, RA, RE, params, t_end) {
   with(as.list(params), {
+    #day_fraction <- t %% 1
+    is_daytime   <- (time >= floor(time) +0.3328) & (time <= floor(time) +0.77071)
     
-    betas   <- get_betas(time, params)
-    inf_mix <- betas$beta_M  * (IA + IE) / N0
-    inf_NA  <- betas$beta_NA * IA / N_A
-    inf_NE  <- betas$beta_NE * IE / N_E
+    # Dynamic betas
+    beta_M  <- ifelse(is_daytime, betaMixprior, 0)
+    beta_NA <- ifelse(is_daytime, 0, betaNightAprior)
+    beta_NE <- ifelse(is_daytime, 0, betaNightEprior)
+   # betas   <- get_betas(time, params)
+    inf_mix <- beta_M  * (IA + IE) / N0
+    inf_NA  <- beta_NA * IA / N_A
+    inf_NE  <- beta_NE * IE / N_E
     
     # Six event rates — exactly the terms in the ODE derivatives
     rates <- c(
@@ -160,8 +166,8 @@ event_ssiirr <- function(time, SA, SE, IA, IE, RA, RE, params, t_end) {
     }
     
     # Time to next event (exponential inter-arrival)
-    #event_time <- time + rexp(1, total_rate)
-    event_time <- 0.1
+    event_time <- time + rexp(1, total_rate)
+    
     # Which event fires?
     event_type <- sample(names(rates), 1, prob = rates / total_rate)
     #print(event_type)
@@ -349,7 +355,7 @@ get_compartment_at <- function(traj, tgrid, col) {
   })
 }
 
-set.seed(2024)
+#set.seed(2024)
 sim_list <- lapply(seq_len(n_sims), function(i) {
   traj <- simulate_ssiirr(final_time, y0, params)
   data.frame(
@@ -424,3 +430,4 @@ ggplot(ensemble_long, aes(x = time, colour = Compartment, fill = Compartment)) +
   ) +
   theme_bw(base_size = 13) +
   theme(legend.position = "bottom", legend.title = element_blank())
+
