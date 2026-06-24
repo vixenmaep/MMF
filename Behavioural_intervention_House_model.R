@@ -102,7 +102,6 @@ ts.ssiirr <- data.frame(lsoda(
   parms = values
 ))
 
-# Define unified styling vectors for consistency across all plots
 pop_colours <- c(
   SA = "lightblue4", IA = "lightblue4", RA = "lightblue4",  # AIMS
   SE = "orange", IE = "orange", RE = "orange" # Empire
@@ -137,7 +136,7 @@ ggplot(ts_long, aes(x = time, y = Count, colour = Compartment, linetype = Compar
   scale_linetype_manual(values = state_linetypes, labels = pop_labels) +
   xlab("Days since 15 June 2026") +
   ylab("Number of individuals") +
-  ggtitle("Interacting SIR Deterministic Model (assumed beta = 1.8)",) +
+  ggtitle("Interacting SIR Deterministic Model, Implementing a Behavioural Change (assumed beta = 1.8)",) +
   theme_bw(base_size = 13) +
   theme(legend.position = "bottom", legend.title = element_blank())
 
