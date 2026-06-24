@@ -1,0 +1,426 @@
+# Date    : 22 July 2026
+# Authors : Mandita Rakei (original), updated to match SSIIRR deterministic ODE
+# Purpose : Gillespie (stochastic) SSIIRR model — two sub-populations (AIMS & Empire)
+#           with time-varying (daytime / nighttime) betas
+
+# ---------------------------------------------------------------------------
+# Model Description
+# ---------------------------------------------------------------------------
+# Two sub-populations sharing AIMS during the day:
+#   Population A — residents of AIMS     (N_A = 25)
+#   Population E — residents of Empire   (N_E = 17)
+#
+# Compartments: SA, SE, IA, IE, RA, RE
+#
+# Force of infection mirrors the ODE exactly:
+#   DAYTIME   (day_fraction in [0.3328, 0.77071]):
+#     inf_mix  = betaMix  * (IA + IE) / N0   <- shared AIMS mixing
+#     inf_NA   = 0                             <- no AIMS-only night contact
+#     inf_NE   = 0                             <- no Empire-only night contact
+#
+#   NIGHTTIME (all other hours):
+#     inf_mix  = 0
+#     inf_NA   = betaNightA * IA / N_A        <- AIMS residents only
+#     inf_NE   = betaNightE * IE / N_E        <- Empire residents only
+#
+# Transitions and rates (exactly matching ODE derivatives):
+#   Event               Change                  Rate
+#   Infect SA (day)     SA -> IA                (inf_mix) * SA
+#   Infect SA (night)   SA -> IA                (inf_NA)  * SA
+#   Infect SE (day)     SE -> IE                (inf_mix) * SE
+#   Infect SE (night)   SE -> IE                (inf_NE)  * SE
+#   Recover IA          IA -> RA                gammaA * IA
+#   Recover IE          IE -> RE                gammaE * IE
+
+# ---------------------------------------------------------------------------
+# Step 0: Load packages
+# ---------------------------------------------------------------------------
+
+library(tidyverse)
+library(lubridate)
+
+# ---------------------------------------------------------------------------
+# Step 1: Load data and set initial conditions (mirrors ODE script exactly)
+# ---------------------------------------------------------------------------
+
+data <- read.csv("MMF-Final+Locations+Doctors.csv", stringsAsFactors = FALSE)
+
+data$Date     <- as.Date(data$Date, format = "%d/%m/%Y")
+data$DateTime <- as.POSIXct(paste(data$Date, data$Time),
+                            format = "%Y-%m-%d %H:%M:%S")
+data$Day      <- as.numeric(data$Date - min(data$Date))
+
+# Location == 1 -> IE (Empire), Location == 0 -> IA (AIMS)
+data$Status <- ifelse(data$Location == 1, "IE", "IA")
+
+# Index cases — same logic as ODE script
+I0_IE <- sum(data$Location == 1 & data$Infected.by == "Started")
+I0_IA <- sum(data$Location == 0 & data$Infected.by == "Started")
+
+# Population sizes — identical to ODE script
+N0  <- 42
+N_A <- 25
+N_E <- 17
+S0_A <- N_A - I0_IA
+S0_E <- N_E - I0_IE
+
+# Initial state vector — compartment names and order match pop.ssiirr in ODE
+y0 <- c(
+  SE = S0_E,
+  SA = S0_A,
+  IA = I0_IA,
+  IE = I0_IE,
+  RA = 0,
+  RE = 0
+)
+
+cat("Initial conditions:\n"); print(y0)
+
+# ---------------------------------------------------------------------------
+# Step 2: Parameters — identical to the ODE script
+# ---------------------------------------------------------------------------
+
+betaMixprior    <- 1.8
+betaNightAprior <- 1.5
+betaNightEprior <- 0       # Empire has no night-only transmission in the ODE
+
+params <- c(
+  betaMix    = betaMixprior,
+  betaNightA = betaNightAprior,
+  betaNightE = betaNightEprior,
+  gammaA     = 1,
+  gammaE     = 1,
+  N0         = N0,
+  N_A        = N_A,
+  N_E        = N_E
+)
+
+# Daytime window (fraction of day) — matches ODE exactly
+DAYTIME_START <- 0.3328
+DAYTIME_END   <- 0.77071
+
+cat("\nParameters:\n"); print(params)
+
+# ---------------------------------------------------------------------------
+# Helper: time-of-day betas (replicates the ifelse logic in the ODE)
+# ---------------------------------------------------------------------------
+
+get_betas <- function(t, params) {
+  day_fraction <- t %% 1
+  is_daytime   <- (day_fraction >= DAYTIME_START) & (day_fraction <= DAYTIME_END)
+  
+  if (is_daytime) {
+    list(
+      beta_M  = params["betaMix"],
+      beta_NA = 0,
+      beta_NE = 0
+    )
+  } else {
+    list(
+      beta_M  = 0,
+      beta_NA = params["betaNightA"],
+      beta_NE = params["betaNightE"]
+    )
+  }
+}
+
+# ---------------------------------------------------------------------------
+# Step 3: Single Gillespie step — six possible events, time-dependent rates
+# ---------------------------------------------------------------------------
+
+event_ssiirr <- function(time, SA, SE, IA, IE, RA, RE, params, t_end) {
+  with(as.list(params), {
+    
+    betas   <- get_betas(time, params)
+    inf_mix <- betas$beta_M  * (IA + IE) / N0
+    inf_NA  <- betas$beta_NA * IA / N_A
+    inf_NE  <- betas$beta_NE * IE / N_E
+    
+    # Six event rates — exactly the terms in the ODE derivatives
+    rates <- c(
+      infect_A_mix   = inf_mix * SA,          # daytime AIMS infection
+      infect_A_night = inf_NA  * SA,           # nighttime AIMS-only infection
+      infect_E_mix   = inf_mix * SE,           # daytime Empire infection
+      infect_E_night = inf_NE  * SE,           # nighttime Empire-only infection
+      recover_A      = gammaA  * IA,
+      recover_E      = gammaE  * IE
+    )
+    
+    total_rate <- sum(rates)
+    
+    new_infection <- 0
+    
+    if (total_rate == 0) {
+      # Epidemic is over — jump to end of simulation
+      return(data.frame(
+        time = t_end,
+        SA = SA, SE = SE, IA = IA, IE = IE, RA = RA, RE = RE,
+        new_infection = 0
+      ))
+    }
+    
+    # Time to next event (exponential inter-arrival)
+    #event_time <- time + rexp(1, total_rate)
+    event_time <- 0.1
+    # Which event fires?
+    event_type <- sample(names(rates), 1, prob = rates / total_rate)
+    print(event_type)
+    switch(event_type,
+           "infect_A_mix"   = { SA <- SA - 1; IA <- IA + 1; new_infection <- 1 },
+           "infect_A_night" = { SA <- SA - 1; IA <- IA + 1; new_infection <- 1 },
+           "infect_E_mix"   = { SE <- SE - 1; IE <- IE + 1; new_infection <- 1 },
+           "infect_E_night" = { SE <- SE - 1; IE <- IE + 1; new_infection <- 1 },
+           "recover_A"      = { IA <- IA - 1; RA <- RA + 1 },
+           "recover_E"      = { IE <- IE - 1; RE <- RE + 1 }
+    )
+    
+    return(data.frame(
+      time = event_time,
+      SA = SA, SE = SE, IA = IA, IE = IE, RA = RA, RE = RE,
+      new_infection = new_infection
+    ))
+  })
+}
+
+# ---------------------------------------------------------------------------
+# Step 4: Full Gillespie simulation from t = 0 to t_end
+#         Includes a CI (cumulative incidence) column to mirror ssiirr_CI
+# ---------------------------------------------------------------------------
+
+simulate_ssiirr <- function(t_end, y, params) {
+  with(as.list(y), {
+    
+    CI <- 0
+    
+    ts <- data.frame(
+      time = 0,
+      SA = SA, SE = SE, IA = IA, IE = IE, RA = RA, RE = RE,
+      CI = CI
+    )
+    current <- ts[1, ]
+    
+    while (current$time < t_end) {
+      
+      nxt <- event_ssiirr(
+        time = current$time,
+        SA   = current$SA,
+        SE   = current$SE,
+        IA   = current$IA,
+        IE   = current$IE,
+        RA   = current$RA,
+        RE   = current$RE,
+        params = params,
+        t_end  = t_end
+      )
+      
+      # Stop if next event falls beyond t_end
+      if (nxt$time >= t_end) break
+      
+      CI <- CI + nxt$new_infection
+      
+      current <- data.frame(
+        time = nxt$time,
+        SA   = nxt$SA, SE = nxt$SE,
+        IA   = nxt$IA, IE = nxt$IE,
+        RA   = nxt$RA, RE = nxt$RE,
+        CI   = CI
+      )
+      ts <- rbind(ts, current)
+    }
+    
+    # Final row at exactly t_end for clean downstream indexing
+    ts <- rbind(ts, data.frame(
+      time = t_end,
+      SA   = current$SA, SE = current$SE,
+      IA   = current$IA, IE = current$IE,
+      RA   = current$RA, RE = current$RE,
+      CI   = CI
+    ))
+    
+    return(ts)
+  })
+}
+
+# ---------------------------------------------------------------------------
+# Step 5: Run one realisation
+# ---------------------------------------------------------------------------
+
+#set.seed(42)
+final_time <- 10     # days — same horizon as the ODE script
+ts1 <- simulate_ssiirr(final_time, y0, params)
+
+cat("\nGillespie trajectory (last 6 rows):\n"); print(tail(ts1))
+
+# ---------------------------------------------------------------------------
+# Step 6a: Plot all six compartments (mirrors ODE compartment plot)
+# ---------------------------------------------------------------------------
+
+ts1_long <- ts1 %>%
+  pivot_longer(cols      = c(SA, SE, IA, IE, RA, RE),
+               names_to  = "Compartment",
+               values_to = "Count") %>%
+  mutate(Compartment = factor(Compartment,
+                              levels = c("SA", "SE", "IA", "IE", "RA", "RE")))
+
+ggplot(ts1_long, aes(x = time, y = Count, colour = Compartment)) +
+  geom_step(linewidth = 1.1) +
+  scale_colour_manual(
+    values = c(SA = "steelblue", SE = "magenta",
+               IA = "orange",   IE = "red",
+               RA = "forestgreen", RE = "black"),
+    labels = c(SA = "Susceptible (AIMS)",
+               SE = "Susceptible (Empire)",
+               IA = "Infectious (AIMS)",
+               IE = "Infectious (Empire)",
+               RA = "Recovered (AIMS)",
+               RE = "Recovered (Empire)")
+  ) +
+  xlab("Days since index case (15 June 2026)") +
+  ylab("Number of individuals") +
+  ggtitle("SSIIRR Gillespie Model — all compartments (one realisation)",
+          subtitle = paste0("betaMix = ", params["betaMix"],
+                            "  |  betaNightA = ", params["betaNightA"],
+                            "  |  betaNightE = ", params["betaNightE"])) +
+  theme_bw(base_size = 13) +
+  theme(legend.position = "bottom", legend.title = element_blank())
+
+# ---------------------------------------------------------------------------
+# Step 6b: AIMS compartments only (mirrors ODE AIMS plot)
+# ---------------------------------------------------------------------------
+
+ts1_long_A <- ts1 %>%
+  pivot_longer(cols = c(SA, IA, RA),
+               names_to  = "Compartment",
+               values_to = "Count")
+
+ggplot(ts1_long_A, aes(x = time, y = Count, colour = Compartment)) +
+  geom_step(linewidth = 1.1) +
+  scale_colour_manual(
+    values = c(SA = "steelblue", IA = "orange", RA = "forestgreen"),
+    labels = c(SA = "Susceptible (AIMS)",
+               IA = "Infectious (AIMS)",
+               RA = "Recovered (AIMS)")
+  ) +
+  xlab("Days since index case (15 June 2026)") +
+  ylab("Number of individuals") +
+  ggtitle("AIMS (Population A) — Gillespie Model (one realisation)",
+          subtitle = paste0("Daytime Beta = ", params["betaMix"],
+                            " | Nighttime Beta = ", params["betaNightA"])) +
+  theme_bw(base_size = 13) +
+  theme(legend.position = "bottom", legend.title = element_blank())
+
+# ---------------------------------------------------------------------------
+# Step 6c: Empire compartments only (mirrors ODE Empire plot)
+# ---------------------------------------------------------------------------
+
+ts1_long_E <- ts1 %>%
+  pivot_longer(cols = c(SE, IE, RE),
+               names_to  = "Compartment",
+               values_to = "Count")
+
+ggplot(ts1_long_E, aes(x = time, y = Count, colour = Compartment)) +
+  geom_step(linewidth = 1.1) +
+  scale_colour_manual(
+    values = c(SE = "magenta", IE = "red", RE = "black"),
+    labels = c(SE = "Susceptible (Empire)",
+               IE = "Infectious (Empire)",
+               RE = "Recovered (Empire)")
+  ) +
+  xlab("Days since index case (15 June 2026)") +
+  ylab("Number of individuals") +
+  ggtitle("Empire (Population E) — Gillespie Model (one realisation)",
+          subtitle = paste0("Daytime Beta = ", params["betaMix"],
+                            " | Nighttime Beta = ", params["betaNightE"])) +
+  theme_bw(base_size = 13) +
+  theme(legend.position = "bottom", legend.title = element_blank())
+
+# ---------------------------------------------------------------------------
+# Step 7: Multiple realisations — median + 95 % envelope
+# ---------------------------------------------------------------------------
+
+n_sims   <- 1000
+time_out <- seq(0, final_time, by = 0.02083)   # ~30-min grid, matches ODE step
+
+# Helper: look up compartment value at each grid point (last-value carry-forward)
+get_compartment_at <- function(traj, tgrid, col) {
+  sapply(tgrid, function(t) {
+    idx <- max(which(traj$time <= t))
+    traj[[col]][idx]
+  })
+}
+
+set.seed(2024)
+sim_list <- lapply(seq_len(n_sims), function(i) {
+  traj <- simulate_ssiirr(final_time, y0, params)
+  data.frame(
+    sim  = i,
+    time = time_out,
+    SA   = get_compartment_at(traj, time_out, "SA"),
+    SE   = get_compartment_at(traj, time_out, "SE"),
+    IA   = get_compartment_at(traj, time_out, "IA"),
+    IE   = get_compartment_at(traj, time_out, "IE"),
+    RA   = get_compartment_at(traj, time_out, "RA"),
+    RE   = get_compartment_at(traj, time_out, "RE"),
+    CI   = get_compartment_at(traj, time_out, "CI")
+  )
+})
+
+sim_all <- bind_rows(sim_list)
+
+# Summarise per time point
+ensemble <- sim_all %>%
+  group_by(time) %>%
+  summarise(
+    IA_med = median(IA), IA_lo = quantile(IA, 0.025), IA_hi = quantile(IA, 0.975),
+    IE_med = median(IE), IE_lo = quantile(IE, 0.025), IE_hi = quantile(IE, 0.975),
+    SA_med = median(SA), SA_lo = quantile(SA, 0.025), SA_hi = quantile(SA, 0.975),
+    SE_med = median(SE), SE_lo = quantile(SE, 0.025), SE_hi = quantile(SE, 0.975),
+    RA_med = median(RA), RA_lo = quantile(RA, 0.025), RA_hi = quantile(RA, 0.975),
+    RE_med = median(RE), RE_lo = quantile(RE, 0.025), RE_hi = quantile(RE, 0.975),
+    .groups = "drop"
+  )
+
+# --- Plot: total infectious (IA + IE) ensemble ---
+ggplot(ensemble, aes(x = time)) +
+  geom_ribbon(aes(ymin = IA_lo + IE_lo, ymax = IA_hi + IE_hi),
+              fill = "tomato", alpha = 0.25) +
+  geom_line(aes(y = IA_med + IE_med, colour = "Gillespie median (IA + IE)"),
+            linewidth = 1.1) +
+  scale_colour_manual(values = c("Gillespie median (IA + IE)" = "red")) +
+  xlab("Days since index case") +
+  ylab("Active infectious individuals") +
+  ggtitle(
+    paste0("SSIIRR Gillespie — ", n_sims, " realisations (total infectious)"),
+    subtitle = paste0("Shaded: 95 % simulation envelope  |  ",
+                      "betaMix = ", params["betaMix"],
+                      "  |  betaNightA = ", params["betaNightA"])
+  ) +
+  theme_bw(base_size = 13) +
+  theme(legend.position = "bottom", legend.title = element_blank())
+
+# --- Plot: AIMS vs Empire infectious separately ---
+ensemble_long <- ensemble %>%
+  select(time, IA_med, IE_med, IA_lo, IE_lo, IA_hi, IE_hi) %>%
+  pivot_longer(
+    cols      = -time,
+    names_to  = c("Compartment", ".value"),
+    names_sep = "_"
+  )
+
+ggplot(ensemble_long, aes(x = time, colour = Compartment, fill = Compartment)) +
+  geom_ribbon(aes(ymin = lo, ymax = hi), alpha = 0.2, colour = NA) +
+  geom_line(aes(y = med), linewidth = 1.1) +
+  scale_colour_manual(values = c(IA = "orange", IE = "lightblue4"),
+                      labels = c(IA = "AIMS infectious",
+                                 IE = "Empire infectious")) +
+  scale_fill_manual(values   = c(IA = "orange", IE = "lightblue4"),
+                    labels   = c(IA = "AIMS infectious",
+                                 IE = "Empire infectious")) +
+  xlab("Days since index case") +
+  ylab("Infectious individuals") +
+  ggtitle(
+    paste0("SSIIRR Gillespie — ", n_sims, " realisations (by sub-population)"),
+    subtitle = "Shaded: 95 % simulation envelope"
+  ) +
+  theme_bw(base_size = 13) +
+  theme(legend.position = "bottom", legend.title = element_blank())
