@@ -16,9 +16,9 @@ data$Day      <- as.numeric(data$Date - min(data$Date))
 data$Status <- ifelse(data$Location == 1, "IE", "IA")
 
 
-betaMixprior <- 4.82234
+betaMixprior <- 4.9
 betaNightEprior <- 0
-betaNightAprior <-0.12757
+betaNightAprior <-0.02
 
 I0_IE <- sum(data$Location == 1 & data$Infected.by == "Started") #sum(as.integer(index_case$Location == 1))
 I0_IA <- sum(data$Location == 0 & data$Infected.by == "Started")
@@ -117,19 +117,21 @@ ts_long <- pivot_longer(ts.ssiirr,
                         names_to  = "Compartment",
                         values_to = "Count")
 
-plotTest <- ggplot(ts_long, aes(x = time, y = Count, colour = Compartment, linetype = Compartment)) +
+plotBase <- ggplot(ts_long, aes(x = time, y = Count, colour = Compartment, linetype = Compartment)) +
   geom_line(linewidth = 1.1) +
   scale_colour_manual(values = pop_colours, labels = pop_labels) +
   scale_linetype_manual(values = state_linetypes, labels = pop_labels) +
   xlab("Days since 15 June 2026") +
   ylab("Number of individuals") +
-  ggtitle("Interacting SIR Deterministic Model (assumed beta = 1.8)",) +
+  ggtitle("Interacting SIR Deterministic Model",
+          subtitle = paste0("Transmission Day = ", betaMixprior,
+                                       " | Transmission Night AIMS = ", betaNightAprior, " | Transmission Night Empire = ", betaNightEprior)) +
   theme_bw(base_size = 13) +
   theme(legend.position = "bottom", 
         legend.title = element_blank(),
         axis.title = element_text(size = 15), 
         axis.text = element_text(size = 13))
-ggsave("test_axis_size.png", plotTest, width = 8, height = 6, dpi = 300)
+ggsave("Interactive Plot - Deterministic.png", plotBase, width = 8, height = 6, dpi = 300)
 
 # ==============================================================================
 # 2. AIMS Plot (Population A)
@@ -139,16 +141,22 @@ ts_long_A <- pivot_longer(ts.ssiirr,
                           names_to  = "Compartment",
                           values_to = "Count")
 
-ggplot(ts_long_A, aes(x = time, y = Count, colour = Compartment, linetype = Compartment)) +
+plotBaseAIMS <- ggplot(ts_long_A, aes(x = time, y = Count, colour = Compartment, linetype = Compartment)) +
   geom_line(linewidth = 1.1) +
   scale_colour_manual(values = pop_colours, labels = pop_labels) +
   scale_linetype_manual(values = state_linetypes, labels = pop_labels) +
   xlab("Days since index case (15 June 2026)") +
   ylab("Number of individuals") +
   ggtitle("AIMS (Population A) Deterministic Model",
-          subtitle = paste0("Daytime Beta = ", betaMixprior, " | Nighttime Beta = ", betaNightAprior)) +
+          subtitle = paste0("Transmission Day = ", betaMixprior,
+                            " | Transmission Night AIMS = ", betaNightAprior, " | Transmission Night Empire = ", betaNightEprior)) +
   theme_bw(base_size = 13) +
-  theme(legend.position = "bottom", legend.title = element_blank())
+  theme(legend.position = "bottom", 
+        legend.title = element_blank(),
+        axis.title = element_text(size = 15), 
+        axis.text = element_text(size = 13))
+ggsave("Interactive Plot AIMS - Deterministic.png", plotBaseAIMS, width = 8, height = 6, dpi = 300)
+
 
 
 # ==============================================================================
@@ -159,16 +167,23 @@ ts_long_E <- pivot_longer(ts.ssiirr,
                           names_to  = "Compartment",
                           values_to = "Count")
 
-ggplot(ts_long_E, aes(x = time, y = Count, colour = Compartment, linetype = Compartment)) +
+plotBaseEmpire <- ggplot(ts_long_E, aes(x = time, y = Count, colour = Compartment, linetype = Compartment)) +
   geom_line(linewidth = 1.1) +
   scale_colour_manual(values = pop_colours, labels = pop_labels) +
   scale_linetype_manual(values = state_linetypes, labels = pop_labels) +
   xlab("Days since index case (15 June 2026)") +
   ylab("Number of individuals") +
   ggtitle("Empire (Population E) Deterministic Model",
-          subtitle = paste0("Daytime Beta = ", betaMixprior, " | Nighttime Beta = ", betaNightEprior)) +
+          subtitle = paste0("Transmission Day = ", betaMixprior,
+                            " | Transmission Night AIMS = ", betaNightAprior, " | Transmission Night Empire = ", betaNightEprior)) +
   theme_bw(base_size = 13) +
-  theme(legend.position = "bottom", legend.title = element_blank())
+  theme(legend.position = "bottom", 
+        legend.title = element_blank(),
+        axis.title = element_text(size = 15), 
+        axis.text = element_text(size = 13))
+ggsave("Interactive Plot Empire - Deterministic.png", plotBaseEmpire, width = 8, height = 6, dpi = 300)
+
+
 
 
 
