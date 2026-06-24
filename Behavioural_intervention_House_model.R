@@ -104,7 +104,7 @@ ts.ssiirr <- data.frame(lsoda(
 
 # Define unified styling vectors for consistency across all plots
 pop_colours <- c(
-  SA = "violetred", IA = "violetred", RA = "violetred",  # AIMS
+  SA = "lightblue4", IA = "lightblue4", RA = "lightblue4",  # AIMS
   SE = "orange", IE = "orange", RE = "orange" # Empire
 )
 
