@@ -106,7 +106,7 @@ cat("\nParameter values:\n")
 print(values)
 
 R0_prior <- betaMixprior
-cat("\nBasic Reproduction Number (R0):", round(R0_value, 3), "\n")
+cat("\nBasic Reproduction Number (R0):", round(R0_prior, 3), "\n")
 
 #ssiirr <- function(t, y, parms) {
  # with(c(as.list(y), parms), {
@@ -268,7 +268,7 @@ ggplot(ts_long, aes(x = time, y = Count, colour = Compartment)) +
   xlab("Days since index case (15 June 2026)") +
   ylab("Number of individuals") +
   ggtitle("ssiirr Deterministic Model (assumed beta = 1.8)",
-          subtitle = paste0("R0 = ", round(R0_value, 2),
+          subtitle = paste0("R0 = ", round(R0_prior, 2),
                             "  |  pA = ", round(values["pA"], 2))) +
   theme_bw(base_size = 13) +
   theme(legend.position = "bottom", legend.title = element_blank())
