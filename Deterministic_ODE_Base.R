@@ -1,3 +1,37 @@
+# Date    : 24 July 2026
+# Authors : Vix Pretorius, edited from Lebogang Mathlanya's code
+# Purpose : ODE (Deterministic) Interactive SIR model — two sub-populations (AIMS & Empire)
+#           with time-varying (daytime / nighttime) betas
+
+# ---------------------------------------------------------------------------
+# Model Description
+# ---------------------------------------------------------------------------
+# Two sub-populations sharing AIMS during the day:
+#   Population A — residents of AIMS     (N_A = 25)
+#   Population E — residents of Empire   (N_E = 17)
+#
+# Compartments: SA, SE, IA, IE, RA, RE
+#
+# Force of infection mirrors the ODE exactly:
+#   DAYTIME   (day_fraction in [0.3328, 0.77071]):
+#     inf_mix  = betaMix  * (IA + IE) / N0   <- shared AIMS mixing
+#     inf_NA   = 0                             <- no AIMS-only night contact
+#     inf_NE   = 0                             <- no Empire-only night contact
+#
+#   NIGHTTIME (all other hours):
+#     inf_mix  = 0
+#     inf_NA   = betaNightA * IA / N_A        <- AIMS residents only
+#     inf_NE   = betaNightE * IE / N_E        <- Empire residents only
+#
+# Transitions and rates (exactly matching ODE derivatives):
+#   Event               Change                  Rate
+#   Infect SA (day)     SA -> IA                (inf_mix) * SA
+#   Infect SA (night)   SA -> IA                (inf_NA)  * SA
+#   Infect SE (day)     SE -> IE                (inf_mix) * SE
+#   Infect SE (night)   SE -> IE                (inf_NE)  * SE
+#   Recover IA          IA -> RA                gammaA * IA
+#   Recover IE          IE -> RE                gammaE * IE
+
 library(deSolve)
 library(ggplot2)
 library(ellipse)
@@ -16,9 +50,9 @@ data$Day      <- as.numeric(data$Date - min(data$Date))
 data$Status <- ifelse(data$Location == 1, "IE", "IA")
 
 
-betaMixprior <- 4.9
-betaNightEprior <- 0
-betaNightAprior <-0.02
+betaMixpost <- 3.1
+betaNightEpost <- 0
+betaNightApost <-0.9
 
 I0_IE <- sum(data$Location == 1 & data$Infected.by == "Started") #sum(as.integer(index_case$Location == 1))
 I0_IA <- sum(data$Location == 0 & data$Infected.by == "Started")
@@ -43,9 +77,9 @@ values <- c(
   N0              = 42,
   N_A             = 25,
   N_E             = 17,
-  betaMixprior    = betaMixprior,
-  betaNightAprior = betaNightAprior,
-  betaNightEprior = betaNightEprior
+  betaMixpost    = betaMixpost,
+  betaNightApost = betaNightApost,
+  betaNightEpost = betaNightEpost
 )
 
 ssiirr <- function(t, y, parms) {
@@ -56,9 +90,9 @@ ssiirr <- function(t, y, parms) {
     is_daytime   <- (day_fraction >= 0.3328) & (day_fraction <= 0.77071)
     
     # Dynamic betas
-    beta_M  <- ifelse(is_daytime, betaMixprior, 0)
-    beta_NA <- ifelse(is_daytime, 0, betaNightAprior)
-    beta_NE <- ifelse(is_daytime, 0, betaNightEprior)
+    beta_M  <- ifelse(is_daytime, betaMixpost, 0)
+    beta_NA <- ifelse(is_daytime, 0, betaNightApost)
+    beta_NE <- ifelse(is_daytime, 0, betaNightEpost)
     
     # Force of infection (per house)
     inf_mix <- beta_M * (IA + IE) / N0
@@ -80,7 +114,7 @@ ssiirr <- function(t, y, parms) {
 }
 
 # 3. Run the model
-time.out <- seq(0, 5, by = 0.02083)
+time.out <- seq(0, 10, by = 0.02083)
 
 ts.ssiirr <- data.frame(lsoda(
   y     = pop.ssiirr,
@@ -124,8 +158,8 @@ plotBase <- ggplot(ts_long, aes(x = time, y = Count, colour = Compartment, linet
   xlab("Days since 15 June 2026") +
   ylab("Number of individuals") +
   ggtitle("Interacting SIR Deterministic Model",
-          subtitle = paste0("Transmission Day = ", betaMixprior,
-                                       " | Transmission Night AIMS = ", betaNightAprior, " | Transmission Night Empire = ", betaNightEprior)) +
+          subtitle = paste0("Trans. Day = ", betaMixpost,
+                                       " | Trans. Night AIMS = ", betaNightApost, " | Trans. Night Empire = ", betaNightEpost)) +
   theme_bw(base_size = 13) +
   theme(legend.position = "bottom", 
         legend.title = element_blank(),
@@ -148,8 +182,8 @@ plotBaseAIMS <- ggplot(ts_long_A, aes(x = time, y = Count, colour = Compartment,
   xlab("Days since index case (15 June 2026)") +
   ylab("Number of individuals") +
   ggtitle("AIMS (Population A) Deterministic Model",
-          subtitle = paste0("Transmission Day = ", betaMixprior,
-                            " | Transmission Night AIMS = ", betaNightAprior, " | Transmission Night Empire = ", betaNightEprior)) +
+          subtitle = paste0("Trans. Day = ", betaMixpost,
+                            " | Trans. Night AIMS = ", betaNightApost, " | Trans. Night Empire = ", betaNightEpost)) +
   theme_bw(base_size = 13) +
   theme(legend.position = "bottom", 
         legend.title = element_blank(),
@@ -174,8 +208,8 @@ plotBaseEmpire <- ggplot(ts_long_E, aes(x = time, y = Count, colour = Compartmen
   xlab("Days since index case (15 June 2026)") +
   ylab("Number of individuals") +
   ggtitle("Empire (Population E) Deterministic Model",
-          subtitle = paste0("Transmission Day = ", betaMixprior,
-                            " | Transmission Night AIMS = ", betaNightAprior, " | Transmission Night Empire = ", betaNightEprior)) +
+          subtitle = paste0("Trans. Day = ", betaMixpost,
+                            " | Trans. Night AIMS = ", betaNightApost, " | Trans. Night Empire = ", betaNightEpost)) +
   theme_bw(base_size = 13) +
   theme(legend.position = "bottom", 
         legend.title = element_blank(),

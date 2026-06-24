@@ -1,7 +1,7 @@
 # Date    : 24 July 2026
-# Authors : Vix Pretorius, edited from Lebogang Mathlanya's code
-# Purpose : ODE (Deterministic) Interactive SIR model — two sub-populations (AIMS & Empire)
-#           with time-varying (daytime / nighttime) betas
+# Authors : Vix Pretorius, edited from Deterministic ODE code code
+# Purpose : Deterministic Interactive SIR model — two sub-populations (AIMS & Empire)
+#           with time-varying (daytime / nighttime) betas, modelling intervention of a behavioural change on the infectious curve
 
 # ---------------------------------------------------------------------------
 # Model Description
@@ -177,25 +177,7 @@ ts.ssiirr_base <- data.frame(lsoda(
   parms = values
 ))
 
-pop_colours <- c(
-  SA = "lightblue4", IA = "lightblue4", RA = "lightblue4",  # AIMS
-  SE = "orange", IE = "orange", RE = "orange" # Empire
-)
 
-pop_labels <- c(
-  SA = "Susceptible living at AIMS",
-  SE = "Susceptible living at Empire",
-  IA = "Infectious (living at AIMS)",
-  IE = "Infectious (living at Empire)",
-  RA = "Recovered at AIMS", 
-  RE = "Recovered at Empire"
-)
-
-state_linetypes <- c(
-  SA = "dotted",    SE = "dotted",
-  IA = "solid",     IE = "solid",
-  RA = "dotdash",   RE = "dotdash"
-)
 
 
 # ==============================================================================
