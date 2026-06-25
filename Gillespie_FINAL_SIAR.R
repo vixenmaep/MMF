@@ -78,8 +78,8 @@ y0 <- c(
 # Step 2: Parameters — identical to the ODE script
 # ---------------------------------------------------------------------------
 
-betaMixprior    <- 4.82234
-betaNightAprior <- 0.12757
+betaMixprior    <- 3.1
+betaNightAprior <- 0.9
 betaNightEprior <- 0       # Empire has no night-only transmission in the ODE
 
 params <- c(
