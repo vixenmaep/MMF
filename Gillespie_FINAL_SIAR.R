@@ -1,4 +1,3 @@
-
 # Date    : 22 July 2026
 # Authors : Mandita Rakei (original), updated to match SSIIRR deterministic ODE
 # Purpose : Gillespie (stochastic) SIR model — two sub-populations (AIMS & Empire)
@@ -264,19 +263,10 @@ ts1_long <- ts1 %>%
   mutate(Compartment = factor(Compartment,
                               levels = c("SA", "SE", "IA", "IE", "RA", "RE")))
 
-Combination <- ggplot(ts1_long, aes(x = time, y = Count, colour = Compartment)) +
+Combination <- ggplot(ts1_long, aes(x = time, y = Count, colour = Compartment, linetype = Compartment)) +
   geom_step(linewidth = 1.1) +
-  scale_colour_manual(
-    values = c(SA = "steelblue", SE = "magenta",
-               IA = "orange",    IE = "red",
-               RA = "forestgreen", RE = "black"),
-    labels = c(SA = "Susceptible (AIMS)",
-               SE = "Susceptible (Empire)",
-               IA = "Infectious (AIMS)",
-               IE = "Infectious (Empire)",
-               RA = "Recovered (AIMS)",
-               RE = "Recovered (Empire)")
-  ) +
+  scale_colour_manual(values = pop_colours, labels = pop_labels) +
+  scale_linetype_manual(values = state_linetypes, labels = pop_labels) +
   xlab("Days since index case (15 June 2026)") +
   ylab("Number of individuals") +
   ggtitle("Interacting SIR Gillespie Model — (single run)",
@@ -446,5 +436,5 @@ plotEnsembleSplit <- ggplot(ensemble_long, aes(x = time, colour = Compartment, f
 
 ggsave("ensemble_split_infectious.png", plotEnsembleSplit, width = 8, height = 6, dpi = 300)
 
-```
+
 
