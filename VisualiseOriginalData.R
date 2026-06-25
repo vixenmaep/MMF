@@ -35,8 +35,8 @@ full_timeline_data <- master_timeline %>%
   arrange(Hour_Bin)
 
 ggplot(full_timeline_data, aes(x = Hour_Bin, y = Count)) +
-  geom_line(color = "#e74c3c", size = 1) + 
-  geom_area(fill = "#e74c3c", alpha = 0.15) +
+  geom_line(color = "red", size = 1) + 
+  geom_area(fill = "tomato", alpha = 0.15) +
   geom_point(data = filter(full_timeline_data, Count > 0), 
              color = "#c0392b", size = 1.5) +
   scale_x_datetime(date_breaks = "1 day", date_labels = "%b %d, %Y") +
@@ -50,8 +50,11 @@ ggplot(full_timeline_data, aes(x = Hour_Bin, y = Count)) +
   theme(
     plot.title = element_text(face = "bold", size = 14, margin = margin(b=8)),
     plot.subtitle = element_text(color = "gray40", margin = margin(b=12)),
-    panel.grid.minor = element_blank()
+    panel.grid.minor = element_blank(),
+    axis.title = element_text(size = 15), 
+    axis.text = element_text(size = 13)
   )
+ggsave("Name of Picture.png", plot label, width = 8, height = 6, dpi = 300)
 
 
 # For Intervals < 12:30 < 18:30 < 00:00
@@ -102,18 +105,18 @@ full_timeline_data <- master_grid %>%
 
 print(full_timeline_data)
 
-ggplot(full_timeline_data, aes(x = Timeline_Step, y = Count, group = 1)) +
+plot <- ggplot(full_timeline_data, aes(x = Timeline_Step, y = Count, group = 1)) +
   # Add a background area shading to visualize the wave shifts
-  geom_area(fill = "#2980b9", alpha = 0.15) +
+  geom_area(fill = "red", alpha = 0.15) +
   # Continuous trend line across shifts
-  geom_line(color = "#2980b9", size = 1.1) +
+  geom_line(color = "tomato", size = 1.1) +
   # Highlight the interval endpoints
-  geom_point(color = "#2c3e50", size = 2.5) +
+  geom_point(color = "#c0392b", size = 2.5) +
   
   theme_minimal(base_size = 12) +
   labs(
-    title = "Infection Counts Split by Custom Time Windows",
-    subtitle = "Chronological window tracking up to 12:30, 18:30, and Midnight across all days",
+    title = "Infection Counts Split by Time Windows",
+    subtitle = "Window tracking up to 12:30, till 18:30, and till Midnight",
     x = "Daily Time Windows",
     y = "Infection Incident Count"
   ) +
@@ -121,5 +124,56 @@ ggplot(full_timeline_data, aes(x = Timeline_Step, y = Count, group = 1)) +
     plot.title = element_text(face = "bold", size = 14, margin = margin(b=6)),
     plot.subtitle = element_text(color = "gray40", margin = margin(b=12)),
     axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+    axis.title = element_text(size = 15), 
+    axis.text = element_text(size = 13),
     panel.grid.minor = element_blank()
   )
+
+ggsave("Data - Time Windows.png", plot, width = 8, height = 6, dpi = 300)
+
+# 1. SET YOUR TARGET X-AXIS POSITIONS HERE
+# Replace 3 and 6 with the actual index positions of June 17 Night and June 18 Night
+pos_17_night <- 9 
+pos_18_night <- 12
+
+max_count <- max(full_timeline_data$Count, na.rm = TRUE)
+
+plot <- ggplot(full_timeline_data, aes(x = Timeline_Step, y = Count, group = 1)) +
+  # Add a background area shading to visualize the wave shifts
+  geom_area(fill = "red", alpha = 0.15) +
+  # Continuous trend line across shifts
+  geom_line(color = "tomato", linewidth = 1.1) +
+  # Highlight the interval endpoints
+  geom_point(color = "#c0392b", size = 2.5) +
+  
+  # --- Straight Vertical Arrow for Night of 17th June ---
+  annotate("segment", 
+           x = pos_17_night, y = max_count * 0.85,     # Start directly above the node
+           xend = pos_17_night, yend = max_count * 0.70, # Point straight down
+           arrow = arrow(length = unit(0.2, "cm"), type = "closed"), color = "black") +
+  
+  # --- Straight Vertical Arrow for Night of 18th June ---
+  annotate("segment", 
+           x = pos_18_night, y = max_count * 0.85,     # Start directly above the node
+           xend = pos_18_night, yend = max_count * 0.70, # Point straight down
+           arrow = arrow(length = unit(0.2, "cm"), type = "closed"), color = "black") +
+  
+  # --- Theme & Formatting ---
+  theme_minimal(base_size = 12) +
+  labs(
+    title = "Infection Counts Split by Time Windows",
+    subtitle = "Window tracking up to 12:30, till 18:30, and till Midnight",
+    x = "Daily Time Windows",
+    y = "Infection Incident Count"
+  ) +
+  theme(
+    plot.title = element_text(face = "bold", size = 14, margin = margin(b=6)),
+    plot.subtitle = element_text(color = "gray40", margin = margin(b=12)),
+    axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+    axis.title = element_text(size = 15), 
+    axis.text = element_text(size = 13),
+    panel.grid.minor = element_blank()
+  )
+
+ggsave("Data - Time Windows.png", plot, width = 8, height = 6, dpi = 300)
+

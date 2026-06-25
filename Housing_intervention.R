@@ -177,11 +177,15 @@ ggplot(out_all, aes(x = time, y = IA + IE, colour = Scenario)) +
   theme(legend.position = "bottom")
 
 out_long <- pivot_longer(out_all, cols = c("IA","IE"), names_to = "Group", values_to = "Infectious")
-
+facet_labels <- c(
+  IA = "AIMS",
+  IE = "Empire"
+)
 plotInter <- ggplot(out_long, aes(x = time, y = Infectious,
                      colour = Scenario, linetype = Group)) +
   geom_line(linewidth = 1.2) +
-  facet_wrap(~Group, scales = "free_y") +
+  facet_wrap(~Group, scales = "free_y", ~ Compartment, labeller = as_labeller(facet_labels)) +
+   +
   scale_colour_manual(values = c("Continuous Mixing"   = "purple",
                                  "Baseline" = "magenta",
                                  "Strict Isolation"    = "darkorchid4",

@@ -181,6 +181,7 @@ plotBaseAIMS <- ggplot(ts_long_A, aes(x = time, y = Count, colour = Compartment,
   scale_linetype_manual(values = state_linetypes, labels = pop_labels) +
   xlab("Days since index case (15 June 2026)") +
   ylab("Number of individuals") +
+  ylim(0,25)+
   ggtitle("AIMS (Population A) Deterministic Model",
           subtitle = paste0("Trans. Day = ", betaMixpost,
                             " | Trans. Night AIMS = ", betaNightApost, " | Trans. Night Empire = ", betaNightEpost)) +
@@ -206,6 +207,7 @@ plotBaseEmpire <- ggplot(ts_long_E, aes(x = time, y = Count, colour = Compartmen
   scale_colour_manual(values = pop_colours, labels = pop_labels) +
   scale_linetype_manual(values = state_linetypes, labels = pop_labels) +
   xlab("Days since index case (15 June 2026)") +
+  ylim(0,25)+
   ylab("Number of individuals") +
   ggtitle("Empire (Population E) Deterministic Model",
           subtitle = paste0("Trans. Day = ", betaMixpost,

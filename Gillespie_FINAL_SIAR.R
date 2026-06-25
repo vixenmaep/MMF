@@ -297,6 +297,7 @@ A <- ggplot(ts1_long_A, aes(x = time, y = Count, colour = Compartment, linetype 
   geom_step(linewidth = 1.1) +
   scale_colour_manual(values = pop_colours, labels = pop_labels) +
   scale_linetype_manual(values = state_linetypes, labels = pop_labels) +
+  ylim(0,25)+
   xlab("Days since 15 June 2026") +
   ylab("Number of individuals") +
   ggtitle("AIMS (Population A) — Interacting SIR Gillespie Model (single run)",
@@ -323,6 +324,7 @@ E<-ggplot(ts1_long_E, aes(x = time, y = Count, colour = Compartment, linetype = 
   geom_step(linewidth = 1.1) +
   scale_colour_manual(values = pop_colours, labels = pop_labels) +
   scale_linetype_manual(values = state_linetypes, labels = pop_labels) +
+  ylim(0,25)+
   xlab("Days since 15 June 2026") +
   ylab("Number of individuals") +
   ggtitle("Empire (Population E) — Interacting SIR Gillespie Model (single run)",
